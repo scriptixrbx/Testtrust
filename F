@@ -118,19 +118,53 @@ StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Parent = MainFrame
 
--- Функция замены
-local function ReplaceText(obj, old, new)
-    if obj.Text == old then
-        obj.Text = new
+-- Функция для проверки, является ли объект ником игрока
+local function IsPlayerName(object)
+    -- Проверяем, находится ли объект в Head (голова игрока)
+    local parent = object.Parent
+    while parent do
+        if parent:IsA("Model") and game.Players:GetPlayerFromCharacter(parent) then
+            return true
+        end
+        parent = parent.Parent
+    end
+    
+    -- Дополнительные проверки для разных игр
+    -- Проверка по имени объекта (часто ники находятся в BillBoardGui, NameTag и т.д.)
+    local objectName = object.Name:lower()
+    if objectName:find("name") or objectName:find("tag") or objectName:find("nick") or objectName:find("user") then
         return true
     end
-    if obj.Text:find(old) then
-        obj.Text = obj.Text:gsub(old, new)
-        return true
+    
+    -- Проверка родительского объекта
+    if object.Parent then
+        local parentName = object.Parent.Name:lower()
+        if parentName:find("nametag") or parentName:find("billboard") or parentName:find("head") or parentName:find("humanoid") then
+            return true
+        end
     end
+    
     return false
 end
 
+-- Функция замены текста только для ников
+local function ReplaceText(obj, old, new)
+    if not IsPlayerName(obj) then
+        return false
+    end
+    
+    if obj.Text == old then
+        obj.Text = new
+        return true
+    elseif obj.Text:find(old) then
+        obj.Text = obj.Text:gsub(old, new)
+        return true
+    end
+    
+    return false
+end
+
+-- Основная функция замены
 local function ReplaceAll(old, new)
     local count = 0
     for _, v in ipairs(game:GetDescendants()) do
@@ -155,11 +189,11 @@ ReplaceButton.MouseButton1Click:Connect(function()
     end
     
     local count = ReplaceAll(old, new)
-    StatusLabel.Text = "Replaced: " .. count .. " elements"
+    StatusLabel.Text = "Replaced: " .. count .. " nicknames"
     StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
--- Автозамена новых объектов
+-- Отслеживание новых объектов
 game.DescendantAdded:Connect(function(v)
     task.wait(0.1)
     if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
