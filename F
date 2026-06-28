@@ -106,122 +106,122 @@ StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Parent = MainFrame
 
+-- Переменные для хранения текущих значений
+local currentOld = OldName
+local currentNew = NewName
+
 -- Функция замены текста
-local function ReplaceText(obj, old, new)
-    if obj.Text == old then
-        obj.Text = new
-        return true
-    elseif obj.Text:find(old) then
-        obj.Text = obj.Text:gsub(old, new)
-        return true
+local function ReplaceText(obj)
+    if not obj or not obj:IsA("TextLabel") and not obj:IsA("TextButton") and not obj:IsA("TextBox") then
+        return false
+    end
+    
+    if not obj.Text or currentOld == "" then
+        return false
+    end
+    
+    local changed = false
+    
+    if obj.Text == currentOld then
+        obj.Text = currentNew
+        changed = true
+    elseif obj.Text:find(currentOld) then
+        obj.Text = obj.Text:gsub(currentOld, currentNew)
+        changed = true
+    end
+    
+    return changed
+end
+
+-- Функция проверки что объект в трейде
+local function IsInTrade(obj)
+    local parent = obj.Parent
+    while parent do
+        if parent.Name:lower():find("trade") then
+            return true
+        end
+        parent = parent.Parent
     end
     return false
 end
 
--- Функция для поиска и замены ника в трейде
-local function ReplaceInTrade(old, new)
-    local count = 0
-    local replaced = {}
-    
-    for _, v in ipairs(game:GetDescendants()) do
-        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-            if v.Text and (v.Text == old or v.Text:find(old)) then
-                -- Проверяем что это в трейде
-                local parent = v.Parent
-                local inTrade = false
-                
-                while parent do
-                    local name = parent.Name:lower()
-                    local class = parent.ClassName:lower()
-                    
-                    if name:find("trade") or class:find("trade") then
-                        inTrade = true
-                        break
-                    end
-                    parent = parent.Parent
-                end
-                
-                if inTrade then
-                    ReplaceText(v, old, new)
-                    count = count + 1
-                    table.insert(replaced, v.Name)
-                end
-            end
+-- Функция проверки что объект в чате/уведомлениях
+local function IsInChat(obj)
+    local parent = obj.Parent
+    while parent do
+        local name = parent.Name:lower()
+        if name:find("notif") or name:find("message") or name:find("chat") or name:find("trade") then
+            return true
         end
+        parent = parent.Parent
     end
-    
-    return count
+    return false
 end
 
--- Функция для замены в чате/уведомлениях о трейде
-local function ReplaceInChat(old, new)
-    local count = 0
-    
-    for _, v in ipairs(game:GetDescendants()) do
-        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-            if v.Text and v.Text:find(old) then
-                local parent = v.Parent
-                
-                while parent do
-                    local name = parent.Name:lower()
-                    
-                    -- Проверяем сообщения о трейде
-                    if name:find("notif") or name:find("message") or name:find("trade") then
-                        ReplaceText(v, old, new)
-                        count = count + 1
-                        break
-                    end
-                    parent = parent.Parent
-                end
-            end
-        end
-    end
-    
-    return count
-end
-
--- Главная функция замены
-local function ReplaceAll()
-    local old = OldNameBox.Text
-    local new = NewNameBox.Text
-    
-    if old == "" or new == "" then
+-- Основная функция замены
+local function ProcessObject(obj)
+    if not obj:IsA("TextLabel") and not obj:IsA("TextButton") and not obj:IsA("TextBox") then
         return
     end
     
-    local tradeCount = ReplaceInTrade(old, new)
-    local chatCount = ReplaceInChat(old, new)
+    if not obj.Text or not obj.Text:find(currentOld) then
+        return
+    end
     
-    if tradeCount > 0 then
-        StatusLabel.Text = "✅ Trade: " .. tradeCount .. " | Chat: " .. chatCount
-        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    -- Меняем только в трейде или чате
+    if IsInTrade(obj) or IsInChat(obj) then
+        if ReplaceText(obj) then
+            StatusLabel.Text = "✅ Replaced: " .. currentOld .. " → " .. currentNew
+            StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end
     end
 end
 
--- Бесконечный цикл проверки (проверяет каждые 100мс)
-task.spawn(function()
-    while task.wait(0.1) do
-        ReplaceAll()
-    end
+-- Обновление currentOld и currentNew при изменении текста в полях
+OldNameBox:GetPropertyChangedSignal("Text"):Connect(function()
+    currentOld = OldNameBox.Text
 end)
+
+NewNameBox:GetPropertyChangedSignal("Text"):Connect(function()
+    currentNew = NewNameBox.Text
+end)
+
+-- Обработка ВСЕХ существующих объектов
+local function ProcessAllExisting()
+    for _, obj in ipairs(game:GetDescendants()) do
+        ProcessObject(obj)
+    end
+end
 
 -- Отслеживание новых объектов
-game.DescendantAdded:Connect(function(v)
-    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-        task.wait(0.05)
-        ReplaceAll()
-    end
+game.DescendantAdded:Connect(function(obj)
+    task.wait(0.01)
+    ProcessObject(obj)
 end)
 
--- Отслеживание изменения текста
-for _, v in ipairs(game:GetDescendants()) do
-    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-        v:GetPropertyChangedSignal("Text"):Connect(function()
-            task.wait(0.05)
-            ReplaceAll()
+-- Отслеживание изменения текста в объектах
+local function WatchTextChanges(obj)
+    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+        obj:GetPropertyChangedSignal("Text"):Connect(function()
+            task.wait(0.01)
+            ProcessObject(obj)
         end)
     end
 end
 
--- Изначальная замена
-ReplaceAll()
+-- Вешаем отслеживание на все существующие объекты
+for _, obj in ipairs(game:GetDescendants()) do
+    WatchTextChanges(obj)
+end
+
+-- Вешаем отслеживание на новые объекты
+game.DescendantAdded:Connect(function(obj)
+    WatchTextChanges(obj)
+end)
+
+-- Запускаем первую обработку
+task.wait(0.5)
+ProcessAllExisting()
+
+print("Trade Name Changer loaded!")
+print("Old: " .. currentOld .. " → New: " .. currentNew)
