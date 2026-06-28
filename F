@@ -10,8 +10,8 @@ ScreenGui.Parent = game.CoreGui
 -- Главный фрейм
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 300, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -24,7 +24,7 @@ Title.Name = "Title"
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 Title.BorderSizePixel = 0
-Title.Text = "Trade Name Changer"
+Title.Text = "Auto Name Changer"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
@@ -95,24 +95,12 @@ NewNameBox.Font = Enum.Font.Gotham
 NewNameBox.ClearTextOnFocus = false
 NewNameBox.Parent = MainFrame
 
--- Кнопка Replace
-local ReplaceButton = Instance.new("TextButton")
-ReplaceButton.Size = UDim2.new(1, -20, 0, 35)
-ReplaceButton.Position = UDim2.new(0, 10, 0, 185)
-ReplaceButton.BackgroundColor3 = Color3.fromRGB(65, 130, 200)
-ReplaceButton.BorderSizePixel = 0
-ReplaceButton.Text = "REPLACE"
-ReplaceButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ReplaceButton.TextSize = 16
-ReplaceButton.Font = Enum.Font.GothamBold
-ReplaceButton.Parent = MainFrame
-
 -- Status лейбл
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -20, 0, 20)
-StatusLabel.Position = UDim2.new(0, 10, 0, 225)
+StatusLabel.Position = UDim2.new(0, 10, 0, 175)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = ""
+StatusLabel.Text = "🟢 Auto-replace active"
 StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.Gotham
@@ -125,17 +113,14 @@ local function IsInTradeMenu(object)
         local parentName = parent.Name:lower()
         local className = parent.ClassName:lower()
         
-        -- Проверяем различные названия трейд меню в Adopt Me
         if parentName:find("trade") or parentName:find("trading") then
             return true
         end
         
-        -- Проверяем ScreenGui трейда
         if parent:IsA("ScreenGui") and (parentName:find("trade") or parentName:find("trading")) then
             return true
         end
         
-        -- Проверяем по классу
         if className:find("trade") then
             return true
         end
@@ -145,13 +130,34 @@ local function IsInTradeMenu(object)
     return false
 end
 
--- Функция замены текста только в трейде
-local function ReplaceText(obj, old, new)
-    -- Проверяем только объекты в трейд меню
-    if not IsInTradeMenu(obj) then
-        return false
+-- Функция для проверки, является ли объект сообщением в чате/уведомлением
+local function IsChatMessage(object)
+    local parent = object.Parent
+    while parent do
+        local parentName = parent.Name:lower()
+        
+        -- Проверяем чат и уведомления
+        if parentName:find("chat") or parentName:find("message") or parentName:find("notification") or parentName:find("notif") then
+            return true
+        end
+        
+        -- Проверяем TextChatService
+        if parent:IsA("TextChatService") or parent:IsA("Chat") then
+            return true
+        end
+        
+        -- Проверяем системные сообщения (типа "кинул трейд")
+        if parent:IsA("ScreenGui") and parentName:find("notif") then
+            return true
+        end
+        
+        parent = parent.Parent
     end
-    
+    return false
+end
+
+-- Функция замены текста
+local function ReplaceText(obj, old, new)
     if obj.Text == old then
         obj.Text = new
         return true
@@ -159,49 +165,89 @@ local function ReplaceText(obj, old, new)
         obj.Text = obj.Text:gsub(old, new)
         return true
     end
+    return false
+end
+
+-- Функция замены везде (трейд + сообщения)
+local function ReplaceInObject(obj, old, new)
+    if not obj:IsA("TextLabel") and not obj:IsA("TextButton") and not obj:IsA("TextBox") then
+        return false
+    end
+    
+    -- Меняем в трейде
+    if IsInTradeMenu(obj) then
+        return ReplaceText(obj, old, new)
+    end
+    
+    -- Меняем в сообщениях чата
+    if IsChatMessage(obj) then
+        return ReplaceText(obj, old, new)
+    end
     
     return false
 end
 
--- Основная функция замены
+-- Функция полной замены
 local function ReplaceAll(old, new)
     local count = 0
     for _, v in ipairs(game:GetDescendants()) do
-        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-            if ReplaceText(v, old, new) then
-                count = count + 1
-            end
+        if ReplaceInObject(v, old, new) then
+            count = count + 1
         end
     end
     return count
 end
 
--- Кнопка Replace
-ReplaceButton.MouseButton1Click:Connect(function()
+-- Авто-замена при изменении текста в полях
+OldNameBox:GetPropertyChangedSignal("Text"):Connect(function()
     local old = OldNameBox.Text
     local new = NewNameBox.Text
-    
-    if old == "" then
-        StatusLabel.Text = "Enter old nickname!"
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        return
+    if old ~= "" and new ~= "" then
+        local count = ReplaceAll(old, new)
+        StatusLabel.Text = "🟢 Auto-replaced: " .. count
+        task.wait(1)
+        StatusLabel.Text = "🟢 Auto-replace active"
     end
-    
-    local count = ReplaceAll(old, new)
-    StatusLabel.Text = "Replaced: " .. count .. " in trade"
-    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
--- Отслеживание новых объектов в трейде
+NewNameBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local old = OldNameBox.Text
+    local new = NewNameBox.Text
+    if old ~= "" and new ~= "" then
+        local count = ReplaceAll(old, new)
+        StatusLabel.Text = "🟢 Auto-replaced: " .. count
+        task.wait(1)
+        StatusLabel.Text = "🟢 Auto-replace active"
+    end
+end)
+
+-- Отслеживание новых объектов (авто-замена)
 game.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-        if IsInTradeMenu(v) then
-            ReplaceText(v, OldNameBox.Text, NewNameBox.Text)
+    task.wait(0.05)
+    local old = OldNameBox.Text
+    local new = NewNameBox.Text
+    if old ~= "" and new ~= "" then
+        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            ReplaceInObject(v, old, new)
         end
+    end
+end)
+
+-- Отслеживание изменения текста в существующих объектах
+game.DescendantAdded:Connect(function(v)
+    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+        v:GetPropertyChangedSignal("Text"):Connect(function()
+            task.wait(0.01)
+            local old = OldNameBox.Text
+            local new = NewNameBox.Text
+            if old ~= "" and new ~= "" then
+                ReplaceInObject(v, old, new)
+            end
+        end)
     end
 end)
 
 -- Изначальная замена
 task.wait(0.5)
-ReplaceAll(OldName, NewName)
+local initialCount = ReplaceAll(OldName, NewName)
+StatusLabel.Text = "🟢 Auto-replace active"
