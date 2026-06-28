@@ -1,0 +1,172 @@
+local OldName = "soop"
+local NewName = "zolo"
+
+-- Создаем GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NameChanger"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+-- Главный фрейм
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+-- Заголовок
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+Title.BorderSizePixel = 0
+Title.Text = "Nickname Changer"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+-- Кнопка закрытия
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 2)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 16
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = MainFrame
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Поле Old Name
+local OldNameLabel = Instance.new("TextLabel")
+OldNameLabel.Size = UDim2.new(1, -20, 0, 20)
+OldNameLabel.Position = UDim2.new(0, 10, 0, 50)
+OldNameLabel.BackgroundTransparency = 1
+OldNameLabel.Text = "Old Nickname:"
+OldNameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+OldNameLabel.TextSize = 14
+OldNameLabel.Font = Enum.Font.Gotham
+OldNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+OldNameLabel.Parent = MainFrame
+
+local OldNameBox = Instance.new("TextBox")
+OldNameBox.Size = UDim2.new(1, -20, 0, 30)
+OldNameBox.Position = UDim2.new(0, 10, 0, 75)
+OldNameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+OldNameBox.BorderSizePixel = 0
+OldNameBox.Text = OldName
+OldNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+OldNameBox.TextSize = 14
+OldNameBox.Font = Enum.Font.Gotham
+OldNameBox.ClearTextOnFocus = false
+OldNameBox.Parent = MainFrame
+
+-- Поле New Name
+local NewNameLabel = Instance.new("TextLabel")
+NewNameLabel.Size = UDim2.new(1, -20, 0, 20)
+NewNameLabel.Position = UDim2.new(0, 10, 0, 115)
+NewNameLabel.BackgroundTransparency = 1
+NewNameLabel.Text = "New Nickname:"
+NewNameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+NewNameLabel.TextSize = 14
+NewNameLabel.Font = Enum.Font.Gotham
+NewNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NewNameLabel.Parent = MainFrame
+
+local NewNameBox = Instance.new("TextBox")
+NewNameBox.Size = UDim2.new(1, -20, 0, 30)
+NewNameBox.Position = UDim2.new(0, 10, 0, 140)
+NewNameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+NewNameBox.BorderSizePixel = 0
+NewNameBox.Text = NewName
+NewNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NewNameBox.TextSize = 14
+NewNameBox.Font = Enum.Font.Gotham
+NewNameBox.ClearTextOnFocus = false
+NewNameBox.Parent = MainFrame
+
+-- Кнопка Replace
+local ReplaceButton = Instance.new("TextButton")
+ReplaceButton.Size = UDim2.new(1, -20, 0, 35)
+ReplaceButton.Position = UDim2.new(0, 10, 0, 185)
+ReplaceButton.BackgroundColor3 = Color3.fromRGB(65, 130, 200)
+ReplaceButton.BorderSizePixel = 0
+ReplaceButton.Text = "REPLACE"
+ReplaceButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReplaceButton.TextSize = 16
+ReplaceButton.Font = Enum.Font.GothamBold
+ReplaceButton.Parent = MainFrame
+
+-- Status лейбл
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 20)
+StatusLabel.Position = UDim2.new(0, 10, 0, 225)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = ""
+StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusLabel.TextSize = 12
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Parent = MainFrame
+
+-- Функция замены
+local function ReplaceText(obj, old, new)
+    if obj.Text == old then
+        obj.Text = new
+        return true
+    end
+    if obj.Text:find(old) then
+        obj.Text = obj.Text:gsub(old, new)
+        return true
+    end
+    return false
+end
+
+local function ReplaceAll(old, new)
+    local count = 0
+    for _, v in ipairs(game:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            if ReplaceText(v, old, new) then
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+-- Кнопка Replace
+ReplaceButton.MouseButton1Click:Connect(function()
+    local old = OldNameBox.Text
+    local new = NewNameBox.Text
+    
+    if old == "" then
+        StatusLabel.Text = "Enter old nickname!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    local count = ReplaceAll(old, new)
+    StatusLabel.Text = "Replaced: " .. count .. " elements"
+    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+end)
+
+-- Автозамена новых объектов
+game.DescendantAdded:Connect(function(v)
+    task.wait(0.1)
+    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+        ReplaceText(v, OldNameBox.Text, NewNameBox.Text)
+    end
+end)
+
+-- Изначальная замена
+task.wait(0.5)
+ReplaceAll(OldName, NewName)
