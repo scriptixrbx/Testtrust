@@ -24,7 +24,7 @@ Title.Name = "Title"
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 Title.BorderSizePixel = 0
-Title.Text = "Nickname Changer"
+Title.Text = "Trade Name Changer"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
@@ -118,38 +118,37 @@ StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Parent = MainFrame
 
--- Функция для проверки, является ли объект ником игрока
-local function IsPlayerName(object)
-    -- Проверяем, находится ли объект в Head (голова игрока)
+-- Функция для проверки, находится ли объект в трейд меню
+local function IsInTradeMenu(object)
     local parent = object.Parent
     while parent do
-        if parent:IsA("Model") and game.Players:GetPlayerFromCharacter(parent) then
+        local parentName = parent.Name:lower()
+        local className = parent.ClassName:lower()
+        
+        -- Проверяем различные названия трейд меню в Adopt Me
+        if parentName:find("trade") or parentName:find("trading") then
             return true
         end
+        
+        -- Проверяем ScreenGui трейда
+        if parent:IsA("ScreenGui") and (parentName:find("trade") or parentName:find("trading")) then
+            return true
+        end
+        
+        -- Проверяем по классу
+        if className:find("trade") then
+            return true
+        end
+        
         parent = parent.Parent
     end
-    
-    -- Дополнительные проверки для разных игр
-    -- Проверка по имени объекта (часто ники находятся в BillBoardGui, NameTag и т.д.)
-    local objectName = object.Name:lower()
-    if objectName:find("name") or objectName:find("tag") or objectName:find("nick") or objectName:find("user") then
-        return true
-    end
-    
-    -- Проверка родительского объекта
-    if object.Parent then
-        local parentName = object.Parent.Name:lower()
-        if parentName:find("nametag") or parentName:find("billboard") or parentName:find("head") or parentName:find("humanoid") then
-            return true
-        end
-    end
-    
     return false
 end
 
--- Функция замены текста только для ников
+-- Функция замены текста только в трейде
 local function ReplaceText(obj, old, new)
-    if not IsPlayerName(obj) then
+    -- Проверяем только объекты в трейд меню
+    if not IsInTradeMenu(obj) then
         return false
     end
     
@@ -189,15 +188,17 @@ ReplaceButton.MouseButton1Click:Connect(function()
     end
     
     local count = ReplaceAll(old, new)
-    StatusLabel.Text = "Replaced: " .. count .. " nicknames"
+    StatusLabel.Text = "Replaced: " .. count .. " in trade"
     StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 end)
 
--- Отслеживание новых объектов
+-- Отслеживание новых объектов в трейде
 game.DescendantAdded:Connect(function(v)
     task.wait(0.1)
     if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-        ReplaceText(v, OldNameBox.Text, NewNameBox.Text)
+        if IsInTradeMenu(v) then
+            ReplaceText(v, OldNameBox.Text, NewNameBox.Text)
+        end
     end
 end)
 
